@@ -5,6 +5,14 @@ const userSchema = new Schema(
   {
     firstName: String,
     lastName: String,
+    metaData:{
+      type: Object,
+      default: {},
+    },
+    appID: {
+      type: String,
+      default: 'default',
+    },
     userID: {
       immutable: true,
       type: String,

@@ -8,14 +8,16 @@ const UserModel = require("../models/User");
 exports.createUser = async (user) => {
   return await UserModel.create(user);
 };
-exports.getUserByUserID = async (userID) => {
+exports.getUserByUserID = async (userID, appID) => {
   return await UserModel.findOne({
     userID,
+    appID
   });
 };
-exports.getUserByEmail = async (email) => {
+exports.getUserByEmail = async (email, appID) => {
   return await UserModel.findOne({
     email,
+    appID
   });
 };
 

@@ -7,14 +7,14 @@ const cors = require("cors");
 var bodyParser = require("body-parser");
 const userRouter = require("./routes/user.routes");
 const tokenRouter = require("./routes/auth.routes");
-const { validateToken } = require("./middlewares");
+const { validateToken, validateAppKey } = require("./middlewares");
 
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-app.use("/auth", userRouter);
+app.use("/auth",validateAppKey,  userRouter);
 app.use("/token", validateToken, tokenRouter);
 
 app.get("/health", (_, res) => {

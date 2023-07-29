@@ -23,14 +23,11 @@ exports.createUser = async (req, res) => {
         message: val,
       });
 
-    // has all parameters
-    // if email is already registered // valid
-
     const checkEmail = isValidEmail(body.email);
     if (!checkEmail)
       return res.status(400).send({ message: "Invalid email address" });
 
-    const hasRegistered = await UserService.getUserByEmail(body.email);
+    const hasRegistered = await UserService.getUserByEmail(body.email, req.appID);
 
     if (hasRegistered)
       return res.status(400).send({ message: "Email already registered" });
@@ -38,13 +35,13 @@ exports.createUser = async (req, res) => {
     // create user
     body.userID = generateID();
     body.password = await createHash(body.password);
+    body.appID = req.appID;
     const createUser = await UserService.createUser(body);
     if (!createUser)
       return res.status(400).send({ message: "User account creation failed " });
     createUser.message = "Registration successful";
     return res.status(200).send(createUser);
   } catch (err) {
-    console.log(err);
     return res.send(500);
   }
 };
@@ -61,7 +58,7 @@ exports.loginUser = async (req, res) => {
     
     // fetch the user
     // compare the password 
-    const user = await UserService.getUserByEmail(body.email);
+    const user = await UserService.getUserByEmail(body.email, req.appID);
 
     if (!user)
       return res.status(400).send({ message: "Incorrect email or password" });
@@ -91,3 +88,16 @@ exports.loginUser = async (req, res) => {
     return res.send(500);
   }
 };
+exports.getUser = async (req, res) => {
+    const userID = req.params.userID;
+    try {
+      const user = await UserService.getUserByUserID(userID, req.appID);
+      if(!user) return res.status(400).send({ message: "User not found "});
+      user.password = undefined;
+      return res.status(200).send(user)
+    }
+    catch (err) {
+      console.log(err);
+    return res.send(500);
+    }
+}
