@@ -9,6 +9,14 @@ const userSchema = new Schema(
       type: Object,
       default: {},
     },
+    hasPassword: {
+      type: Boolean,
+      default: false,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     appID: {
       type: String,
       default: 'default',

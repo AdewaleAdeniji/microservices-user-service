@@ -9,7 +9,7 @@ const generateID = () => {
   const timestamp = new Date().getTime().toString(); // get current timestamp as string
   const random = Math.random().toString().substr(2, 5); // generate a random string of length 5
   const userId = timestamp + random; // concatenate the timestamp and random strings
-  return userId;
+  return userId + generateRandomString(10);
 };
 
 // Method to validate the entered password using argon2
@@ -21,15 +21,15 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
-const signToken = (data) => {
-  let jwtSecretKey = process.env.JWT_SECRET_KEY;
+const signToken = (data, appID) => {
+  let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
   const payload = { payload: data };
   payload.date = Date.now();
 
   return jwt.sign(payload, jwtSecretKey);
 };
-const verifyToken = (token) => {
-  let jwtSecretKey = process.env.JWT_SECRET_KEY;
+const verifyToken = (token, appID) => {
+  let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
 
   try {
     const verified = jwt.verify(token, jwtSecretKey);
@@ -78,6 +78,16 @@ const validateRequest = (obj, keys) => {
   }
   return false;
 };
+const generateRandomString = (length = 7)  => {
+  const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let email = '';
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    email += characters.charAt(randomIndex);
+  }
+  return email;
+}
 module.exports = {
   verifyToken,
   signToken,

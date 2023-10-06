@@ -11,11 +11,12 @@ const validateToken = async (req, res, next) => {
     return res.status(403).send({ message: "Forbidden access, login first" });
   }
   //validate the token itself
-  const val = await verifyToken(authorization.split(" ")[1]);
+  const val = await verifyToken(authorization.split(" ")[1], appKey);
   if (!val) {
     return res.status(403).send({ message: "Access expired, login first" });
   }
   console.log(req.originalUrl, appKey)
+  
   req.userID = val.payload.userID;
   req.user = val.payload;
   req.appID = appKey;
