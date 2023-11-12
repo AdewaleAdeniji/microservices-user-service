@@ -148,7 +148,7 @@ exports.createUserAPIKey = async (req, res) => {
     const user = await UserService.getUserByUserID(userID, req.appID);
     if (!user) return res.status(400).send({ message: "User not found " });
     const keys = await generateKeys(req.params.userID);
-    res.send(keys);
+    return res.status(200).send(keys);
   } catch (err) {
     console.log(err);
     return res.send(500);
