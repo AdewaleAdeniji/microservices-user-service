@@ -108,6 +108,36 @@ exports.getUser = async (req, res) => {
     return res.send(500);
   }
 };
+exports.updateUser = async (req, res) => {
+  const userID = req.params.userID;
+  try {
+    const user = await UserService.getUserByUserID(userID, req.appID);
+    if (!user) return res.status(400).send({ message: "User not found " });
+
+    const update = req.body;
+    // if password is in update, remove it from the object
+    if (update.password) {
+      delete update.password;
+    }
+    console.log(update)
+    const updateUser = await UserService.updateUser(user.id, {
+      ...update,
+    });
+    if (updateUser)
+      return res.status(200).send({
+        message: "Update successful",
+        success: true,
+        ...update,
+      });
+    return res.status(400).send({
+      message: "Update failed",
+      success: false,
+    });
+  } catch (err) {
+    // console.log(err);
+    return res.send(500);
+  }
+};
 exports.getUserByID = async (userID, appID) => {
   const user = await UserService.getUserByUserID(userID, appID);
   if (!user) return false;

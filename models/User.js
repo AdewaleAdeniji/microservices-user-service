@@ -16,16 +16,21 @@ const userSchema = new Schema(
     isVerified: {
       type: Boolean,
       default: false,
+      immutable: true,
     },
     appID: {
       type: String,
       default: "default",
+      immutable: true,
     },
     userID: {
       immutable: true,
       type: String,
     },
-    email: String,
+    email: {
+      immutable: true,
+      type: String,
+    },
     password: String,
     status: {
       default: true,
