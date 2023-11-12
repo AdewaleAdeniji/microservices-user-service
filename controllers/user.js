@@ -75,7 +75,7 @@ exports.loginUser = async (req, res) => {
     const hashedPassword = user.password;
     const plainPassword = body.password;
 
-    const isValidPassword = validateHash(hashedPassword, plainPassword);
+    const isValidPassword = await validateHash(hashedPassword, plainPassword);
 
     if (!isValidPassword)
       return res.status(400).send({ message: "Incorrect email or password" });
