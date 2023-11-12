@@ -1,4 +1,6 @@
+const { getUserByID } = require("../controllers/user");
 const { verifyToken } = require("../utils");
+const { decrypt } = require("../utils/apiKeys");
 
 const validateToken = async (req, res, next) => {
   const headers = req.headers;
@@ -16,11 +18,29 @@ const validateToken = async (req, res, next) => {
     return res.status(403).send({ message: "Access expired, login first" });
   }
   console.log(req.originalUrl, appKey)
-  
   req.userID = val.payload.userID;
   req.user = val.payload;
   req.appID = appKey;
 
+  next();
+};
+const validateAPIKey = async (req, res, next) => {
+  const headers = req.headers;
+  const privateKey = headers.authprivatekey;
+  const publicKey = headers.authpublickey;
+  const appKey = headers.appkey;
+  // console.log('here', headers);
+  if (!privateKey || !publicKey) {
+    return res.status(403).send({ message: "Forbidden ACCESS" });
+  }
+  //validate the token itself
+  const val = await decrypt(privateKey, publicKey)
+  if (!val) {
+    return res.status(403).send({ message: "Invalid API key access" });
+  }
+  console.log(req.originalUrl, appKey)
+  req.userID = val;
+  req.user = await getUserByID(val, appKey);
   next();
 };
 
@@ -38,4 +58,5 @@ const validateAppKey = async (req, res, next) => {
 module.exports  = {
     validateToken,
     validateAppKey,
+    validateAPIKey
 }

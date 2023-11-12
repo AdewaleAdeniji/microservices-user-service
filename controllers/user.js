@@ -1,4 +1,5 @@
 const UserService = require("../services/user");
+const { generateKeys } = require("../utils/apiKeys");
 const {
   validateRequest,
   isValidEmail,
@@ -78,7 +79,6 @@ exports.loginUser = async (req, res) => {
 
     if (!isValidPassword)
       return res.status(400).send({ message: "Incorrect email or password" });
-
     //here, all is good
     // generate token
 
@@ -104,7 +104,26 @@ exports.getUser = async (req, res) => {
     user.password = undefined;
     return res.status(200).send(user);
   } catch (err) {
+    // console.log(err);
+    return res.send(500);
+  }
+};
+exports.getUserByID = async (userID, appID) => {
+  const user = await UserService.getUserByUserID(userID, appID);
+  if (!user) return false;
+  return user;
+};
+exports.createUserAPIKey = async (req, res) => {
+  const userID = req.params.userID;
+  try {
+    const user = await UserService.getUserByUserID(userID, req.appID);
+    if (!user) return res.status(400).send({ message: "User not found " });
+    const keys = await generateKeys(req.params.userID);
+    res.send(keys);
+  } catch (err) {
     console.log(err);
     return res.send(500);
   }
 };
+// update user
+// make user an api user

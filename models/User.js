@@ -5,7 +5,7 @@ const userSchema = new Schema(
   {
     firstName: String,
     lastName: String,
-    metaData:{
+    metaData: {
       type: Object,
       default: {},
     },
@@ -19,7 +19,7 @@ const userSchema = new Schema(
     },
     appID: {
       type: String,
-      default: 'default',
+      default: "default",
     },
     userID: {
       immutable: true,
