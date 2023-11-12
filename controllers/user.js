@@ -119,7 +119,6 @@ exports.updateUser = async (req, res) => {
     if (update.password) {
       delete update.password;
     }
-    console.log(update)
     const updateUser = await UserService.updateUser(user.id, {
       ...update,
     });
