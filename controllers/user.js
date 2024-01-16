@@ -7,7 +7,9 @@ const {
   createHash,
   validateHash,
   signToken,
+  PasswordValidator,
 } = require("../utils/index");
+const { HandleEventNotification } = require("./eventController");
 
 exports.createUser = async (req, res) => {
   try {
@@ -15,8 +17,7 @@ exports.createUser = async (req, res) => {
     const body = req?.body;
     const isApiRequest = req?.isApiRequest;
     const client = req?.apiClient;
-    console.log(isApiRequest);
-    console.log(client);
+
     const val = validateRequest(body, ["email", "password"]);
     if (val)
       return res.status(400).send({
@@ -25,7 +26,7 @@ exports.createUser = async (req, res) => {
     const checkEmail = isValidEmail(body.email);
     if (!checkEmail)
       return res.status(400).send({ message: "Invalid email address" });
-    
+
     const hasRegistered = await UserService.getUserByEmail(
       body.email,
       req.appID
@@ -37,10 +38,14 @@ exports.createUser = async (req, res) => {
     // create user
     body.userID = generateID();
     if (body.password) {
-      if(isApiRequest){
-        const passwordValidator = client?.appSettings?.passwordValidator;
-        if(passwordValidator){
-          console.log('has password validator')
+      if (isApiRequest) {
+        const passwordValidator = client?.appSettings?.passwordVerifier;
+        if (passwordValidator) {
+          const { isValid, message } = await PasswordValidator(
+            body.password,
+            passwordValidator
+          );
+          if (!isValid) return res.status(400).send({ message });
         }
       }
       body.password = await createHash(body.password);
@@ -57,6 +62,9 @@ exports.createUser = async (req, res) => {
       userID: createUser.userID,
       message: "Registration successful",
     };
+    if (isApiRequest) {
+      await HandleEventNotification("user-registered", client, response);
+    }
     return res.status(200).send(response);
   } catch (err) {
     console.log(err);
@@ -66,6 +74,10 @@ exports.createUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const body = req.body;
+
+    const isApiRequest = req?.isApiRequest;
+    const client = req?.apiClient;
+
     const val = validateRequest(body, ["email", "password"]);
     if (val) return res.status(400).send({ message: val });
 
@@ -97,6 +109,9 @@ exports.loginUser = async (req, res) => {
       userID: user.userID,
       message: "login successful",
     };
+    if (isApiRequest) {
+      await HandleEventNotification("user-loggedin", client, response);
+    }
     const token = await signToken(response, req.appID);
     response.token = token;
     return res.status(200).send(response);

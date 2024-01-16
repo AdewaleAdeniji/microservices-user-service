@@ -13,7 +13,15 @@ const apiRouter = require("./routes/api.routes");
 
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
+app.use(function (error, _, res, next) {
+  //Catch json error
+  if (error) {
+    return res.status(400).send({ message: "Invalid Request body JSON" });
+  }
+  next();
+});
 app.use(bodyParser.urlencoded({ extended: true }));
+
 
 app.use("/auth",validateAppKey,  userRouter);
 app.use("/token", validateToken, tokenRouter);

@@ -61,13 +61,20 @@ const validateClientAPIKey = async (req, res, next) => {
   const client = await getClientApp(val);
   if(!client) return res.status(403).send({ message: "Invalid API key access" });
   req.appID = client.appID;
-  client.appSettings.passwordVerifier = {
+  client.appSettings = {
+    ensureEmailVerification: true,
+    eventNotifications: {
+      webhookURL: "https://webhook.site/180db206-bc5b-4e94-a8c8-53378740ca19",
+      enabled: true,
+    },
+    passwordVerifier: {
     minLength: 9,
-    shouldContainNumber: true,
-    shouldContainSpecialCharacters: true,
+    shouldContainNumber: false,
+    shouldContainSpecialCharacters: false,
     shouldContainLowerCase: true,
     shouldContainUpperCase: true,
   }
+}
   req.apiClient = client;
   req.isApiRequest = true;
   next();
