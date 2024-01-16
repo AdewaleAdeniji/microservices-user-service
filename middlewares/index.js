@@ -1,4 +1,5 @@
 const { getUserByID } = require("../controllers/user");
+const { getClientApp } = require("../services/client");
 const { verifyToken } = require("../utils");
 const { decrypt } = require("../utils/apiKeys");
 
@@ -21,7 +22,6 @@ const validateToken = async (req, res, next) => {
   req.userID = val.payload.userID;
   req.user = val.payload;
   req.appID = appKey;
-
   next();
 };
 const validateAPIKey = async (req, res, next) => {
@@ -44,12 +44,42 @@ const validateAPIKey = async (req, res, next) => {
   next();
 };
 
+const validateClientAPIKey = async (req, res, next) => {
+  const headers = req.headers;
+  const privateKey = headers.authprivatekey;
+  const publicKey = headers.authpublickey;
+
+  if (!privateKey || !publicKey) {
+    return res.status(403).send({ message: "Forbidden ACCESS" });
+  }
+  //validate the token itself
+  const val = await decrypt(privateKey, publicKey)
+  if (!val) {
+    return res.status(403).send({ message: "Invalid API key access" });
+  }
+  req.userID = val;
+  const client = await getClientApp(val);
+  if(!client) return res.status(403).send({ message: "Invalid API key access" });
+  req.appID = client.appID;
+  client.appSettings.passwordVerifier = {
+    minLength: 9,
+    shouldContainNumber: true,
+    shouldContainSpecialCharacters: true,
+    shouldContainLowerCase: true,
+    shouldContainUpperCase: true,
+  }
+  req.apiClient = client;
+  req.isApiRequest = true;
+  next();
+};
+
 const validateAppKey = async (req, res, next) => {
   const headers = req.headers;
   const appKey = headers.appkey;
   if (!appKey) {
     return res.status(403).send({ message: "No app key" });
   }
+  // #TODO validate app key here
   console.log(req.originalUrl, appKey)
   req.appID = appKey;
   next();
@@ -58,5 +88,6 @@ const validateAppKey = async (req, res, next) => {
 module.exports  = {
     validateToken,
     validateAppKey,
-    validateAPIKey
+    validateAPIKey,
+    validateClientAPIKey
 }

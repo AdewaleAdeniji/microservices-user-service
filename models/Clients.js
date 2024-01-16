@@ -7,11 +7,19 @@ const clientSchema = new Schema(
       type: String,
       default: "default",
     },
+    appAccessKey: {
+      type: String,
+      default: "default",
+    },
     appName: String,
     appDescription: String,
     appOwnerID: {
       immutable: true,
       type: String,
+    },
+    appSettings: {
+      type: Object,
+      default: {},
     },
     status: {
       default: true,

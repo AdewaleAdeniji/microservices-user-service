@@ -12,6 +12,19 @@ const generateID = () => {
   return userId + generateRandomString(10);
 };
 
+const PasswordValidator = (password, passwordValidator) => {
+  var failedVerification = '';
+  const { minLength, shouldContainNumber, shouldContainUpperCase, shouldContainLowerCase, shouldContainSpecialCharacters } = passwordValidator;
+  if (password.length < minLength) failedVerification = 'Password should be at least '+minLength+' characters long';
+  if (shouldContainNumber && !/\d/.test(password)) failedVerification = 'Password should contain at least one number';
+  if (shouldContainUpperCase && !/[A-Z]/.test(password)) failedVerification = 'Password should contain at least one uppercase letter';
+  if (shouldContainLowerCase && !/[a-z]/.test(password)) failedVerification = 'Password should contain at least one lowercase letter';
+  if (shouldContainSpecialCharacters && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password)) failedVerification = 'Password should contain at least one special character';
+  return {
+    isValid: failedVerification === '',
+    message: failedVerification
+  };
+}
 // Method to validate the entered password using argon2
 const validateHash = async function (hashed, candidatePassword) {
   return await argon2.verify(hashed, candidatePassword);
@@ -98,4 +111,5 @@ module.exports = {
   generateOTP,
   WrapHandler,
   validateRequest,
+  PasswordValidator
 };

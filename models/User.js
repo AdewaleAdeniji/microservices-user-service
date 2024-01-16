@@ -18,6 +18,10 @@ const userSchema = new Schema(
       default: false,
       immutable: true,
     },
+    userType: {
+      type: String,
+      default: "user",
+    },
     appID: {
       type: String,
       default: "default",
@@ -26,6 +30,14 @@ const userSchema = new Schema(
     userID: {
       immutable: true,
       type: String,
+    },
+    emailVerified : {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationType: {
+      type: String,
+      default: "default",
     },
     email: {
       immutable: true,

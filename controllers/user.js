@@ -13,16 +13,19 @@ exports.createUser = async (req, res) => {
   try {
     /// here
     const body = req?.body;
-    const val = validateRequest(body, ["firstName", "lastName", "email"]);
+    const isApiRequest = req?.isApiRequest;
+    const client = req?.apiClient;
+    console.log(isApiRequest);
+    console.log(client);
+    const val = validateRequest(body, ["email", "password"]);
     if (val)
       return res.status(400).send({
         message: val,
       });
-
     const checkEmail = isValidEmail(body.email);
     if (!checkEmail)
       return res.status(400).send({ message: "Invalid email address" });
-
+    
     const hasRegistered = await UserService.getUserByEmail(
       body.email,
       req.appID
@@ -34,6 +37,12 @@ exports.createUser = async (req, res) => {
     // create user
     body.userID = generateID();
     if (body.password) {
+      if(isApiRequest){
+        const passwordValidator = client?.appSettings?.passwordValidator;
+        if(passwordValidator){
+          console.log('has password validator')
+        }
+      }
       body.password = await createHash(body.password);
       body.hasPassword = true;
     }

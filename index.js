@@ -7,16 +7,21 @@ const cors = require("cors");
 var bodyParser = require("body-parser");
 const userRouter = require("./routes/user.routes");
 const tokenRouter = require("./routes/auth.routes");
-const { validateToken, validateAppKey, validateAPIKey } = require("./middlewares");
+const { validateToken, validateAppKey, validateAPIKey, validateClientAPIKey } = require("./middlewares");
+const appRouter = require("./routes/app.routes");
+const apiRouter = require("./routes/api.routes");
 
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
 app.use("/auth",validateAppKey,  userRouter);
 app.use("/token", validateToken, tokenRouter);
 app.use("/key", validateAPIKey, tokenRouter);
+
+app.use("/app", validateToken, appRouter);
+app.use("/api", validateClientAPIKey, apiRouter);
+
 
 app.get("/health", (_, res) => {
   return res.status(200).send("OK");
