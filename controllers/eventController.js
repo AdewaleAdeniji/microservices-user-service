@@ -1,10 +1,6 @@
 const request = require("axios");
 exports.HandleEventNotification = (event, client, payload) => {
-  console.log(event);
-  console.log(
-    client?.appSettings?.eventNotifications?.enabled,
-    client?.appSettings?.eventNotifications?.webhookURL
-  );
+
   if (
     client &&
     client?.appSettings?.eventNotifications?.enabled &&
@@ -23,7 +19,7 @@ exports.HandleEventNotification = (event, client, payload) => {
       }),
     })
       .then((message) => {
-        console.log(message);
+        console.log('webhook event '+event+' sent');
       })
       .catch((err) => console.log(err));
   }

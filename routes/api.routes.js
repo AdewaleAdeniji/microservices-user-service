@@ -1,9 +1,18 @@
 const express = require("express");
 const { verifyAuthToken } = require("../controllers/tokenController");
-const { createUser, loginUser } = require("../controllers/user");
+const { createUser, loginUser, getUser, updateUser } = require("../controllers/user");
 
 const apiRouter = express.Router();
 apiRouter.route("/user/register").post(createUser)
 apiRouter.route("/user/login").post(loginUser)
+apiRouter.route("/users/:userID").get(getUser)
+apiRouter.route("/users/:userID").post(updateUser)
 
-module.exports = apiRouter;
+const RoutesWithPrivateKeyAccess = [
+    {
+        path: "/users/:userID",
+        method: "POST",
+        privateKeyRequired: true,
+    }   
+]
+module.exports =  { apiRouter, RoutesWithPrivateKeyAccess };

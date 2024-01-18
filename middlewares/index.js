@@ -1,7 +1,8 @@
 const { getUserByID } = require("../controllers/user");
+const { RoutesWithPrivateKeyAccess } = require("../routes/api.routes");
 const { getClientApp } = require("../services/client");
-const { verifyToken } = require("../utils");
-const { decrypt } = require("../utils/apiKeys");
+const { verifyToken, isPathInList } = require("../utils");
+const { decrypt, generateKeys } = require("../utils/apiKeys");
 
 const validateToken = async (req, res, next) => {
   const headers = req.headers;
@@ -46,19 +47,37 @@ const validateAPIKey = async (req, res, next) => {
 
 const validateClientAPIKey = async (req, res, next) => {
   const headers = req.headers;
-  const privateKey = headers.authprivatekey;
-  const publicKey = headers.authpublickey;
+  const authpublicKey = headers.authpublickey;
+  const appID = headers.appid;
 
-  if (!privateKey || !publicKey) {
+  if (!appID || !authpublicKey) {
     return res.status(403).send({ message: "Forbidden ACCESS" });
   }
-  //validate the token itself
-  const val = await decrypt(privateKey, publicKey)
-  if (!val) {
-    return res.status(403).send({ message: "Invalid API key access" });
+  const { status, privateKeyRequired } = await isPathInList(req.path, req.method, RoutesWithPrivateKeyAccess)
+
+  if(status && privateKeyRequired){
+    const authprivateKey = headers.authprivatekey;
+    if (!authprivateKey) {
+      return res.status(403).send({ message: "Invalid API keys access" });
+    }
+    const val = await decrypt(authprivateKey, authpublicKey)
+    if (!val) {
+      return res.status(403).send({ message: "Invalid API key access" });
+    }
+    req.userID = val;
+    req.user = await getUserByID(val, appID);
+    req.appID = appID;
+    req.appAccessKey = authpublicKey;
+    req.isApiRequest = true;
+    next();
+    return;
   }
-  req.userID = val;
-  const client = await getClientApp(val);
+  const keys = await generateKeys(appID);
+  const { privateKey, publicKey } = keys;
+  if(publicKey !== authpublicKey) return res.status(403).send({ message: "Forbidden Request Keys" });
+  
+  req.userID = appID;
+  const client = await getClientApp(appID);
   if(!client) return res.status(403).send({ message: "Invalid API key access" });
   req.appID = client.appID;
   client.appSettings = {
@@ -77,6 +96,8 @@ const validateClientAPIKey = async (req, res, next) => {
 }
   req.apiClient = client;
   req.isApiRequest = true;
+  req.appID = client.appID;
+  req.appAccessKey = client.appAccessKey;
   next();
 };
 

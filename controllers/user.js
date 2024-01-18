@@ -8,8 +8,10 @@ const {
   validateHash,
   signToken,
   PasswordValidator,
+  getUserObjectFormat,
 } = require("../utils/index");
 const { HandleEventNotification } = require("./eventController");
+const clientModel = require("../models/Clients.js");
 
 exports.createUser = async (req, res) => {
   try {
@@ -23,18 +25,20 @@ exports.createUser = async (req, res) => {
       return res.status(400).send({
         message: val,
       });
+    const appID = isApiRequest ? req.appAccessKey : req.appID;
+    
     const checkEmail = isValidEmail(body.email);
     if (!checkEmail)
       return res.status(400).send({ message: "Invalid email address" });
 
     const hasRegistered = await UserService.getUserByEmail(
       body.email,
-      req.appID
+      appID
     );
 
     if (hasRegistered)
       return res.status(400).send({ message: "Email already registered" });
-
+    
     // create user
     body.userID = generateID();
     if (body.password) {
@@ -51,7 +55,8 @@ exports.createUser = async (req, res) => {
       body.password = await createHash(body.password);
       body.hasPassword = true;
     }
-    body.appID = req.appID;
+
+    body.appID = appID;
     const createUser = await UserService.createUser(body);
     if (!createUser)
       return res.status(400).send({ message: "User account creation failed " });
@@ -67,7 +72,7 @@ exports.createUser = async (req, res) => {
     }
     return res.status(200).send(response);
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return res.sendStatus(500);
   }
 };
@@ -88,10 +93,11 @@ exports.loginUser = async (req, res) => {
 
     // fetch the user
     // compare the password
-    const user = await UserService.getUserByEmail(body.email, req.appID);
+    const appID = isApiRequest ? req.appAccessKey : req.appID;
+    const user = await UserService.getUserByEmail(body.email, appID);
 
     if (!user)
-      return res.status(400).send({ message: "Incorrect email or password" });
+      return res.status(400).send({ message: "Incorrect email or password." });
 
     const hashedPassword = user.password;
     const plainPassword = body.password;
@@ -106,6 +112,7 @@ exports.loginUser = async (req, res) => {
     const response = {
       firstName: user.firstName,
       lastName: user.lastName,
+      email: user.email,
       userID: user.userID,
       message: "login successful",
     };
@@ -122,10 +129,15 @@ exports.loginUser = async (req, res) => {
 };
 exports.getUser = async (req, res) => {
   const userID = req.params.userID;
+
+  const isApiRequest = req?.isApiRequest;
+  const client = req?.apiClient;
+
+  const appID = isApiRequest ? req.appAccessKey : req.appID;
   try {
-    const user = await UserService.getUserByUserID(userID, req.appID);
+    const selectOptions = '-_id -__v -appAccessKey -password -appID';
+    const user = await UserService.getUserByUserID(userID, appID, selectOptions);
     if (!user) return res.status(400).send({ message: "User not found " });
-    user.password = undefined;
     return res.status(200).send(user);
   } catch (err) {
     // console.log(err);
@@ -134,31 +146,51 @@ exports.getUser = async (req, res) => {
 };
 exports.updateUser = async (req, res) => {
   const userID = req.params.userID;
-  try {
-    const user = await UserService.getUserByUserID(userID, req.appID);
-    if (!user) return res.status(400).send({ message: "User not found " });
+  const isApiRequest = req?.isApiRequest;
+  const client = req?.apiClient;
 
+  try {
+    const selectOptions = ' -__v -appAccessKey -password -appID';
+    const user = await UserService.getUserByUserID(userID, req.appID, selectOptions);
+    if (!user) return res.status(400).send({ message: "User not found " });
     const update = req.body;
+    const updatedUserData = user.updatedUserData || [];
+
+    updatedUserData.push(getUserObjectFormat(user))
+    
+    // update.updatedUserData = oldData;
     // if password is in update, remove it from the object
     if (update.password) {
       delete update.password;
     }
+
     const updateUser = await UserService.updateUser(user.id, {
       ...update,
+      updatedUserData
     });
-    if (updateUser)
+    if (updateUser){
+      if (isApiRequest) {
+        console.log(req.body)
+        await HandleEventNotification("user-updated", client, {
+          ...update,
+          userID: user.userID,
+          email: user.email,
+        });
+      }
       return res.status(200).send({
+        
         message: "Update successful",
         success: true,
         ...update,
       });
+    }
     return res.status(400).send({
       message: "Update failed",
       success: false,
     });
   } catch (err) {
-    // console.log(err);
-    return res.send(500);
+    console.log(err);
+    return res.sendStatus(500);
   }
 };
 exports.getUserByID = async (userID, appID) => {
@@ -178,5 +210,23 @@ exports.createUserAPIKey = async (req, res) => {
     return res.send(500);
   }
 };
+exports.getClientUsers = async (req, res) => {
+  try {
+    const appID = req.params.appID;
+    console.log(appID);
+
+    const client = await clientModel
+      .findOne({ appOwnerID: req.userID, appID: req.params.appID })
+      .select("-_id -__v -appOwnerID -appAccessKey");
+    if(!client) return res.status(404).send({ message: "Client not found" });
+    const selectOptions = ' -__v -appAccessKey -password -appID';
+    const users = await UserService.getClientUsers(appID, selectOptions);
+    return res.status(200).send(users);
+  }
+  catch(err){
+    console.log(err);
+    return res.sendStatus(500);
+  }
+}
 // update user
 // make user an api user

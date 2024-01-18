@@ -12,6 +12,23 @@ const generateID = () => {
   return userId + generateRandomString(10);
 };
 
+const getUserObjectFormat  = (user) => {
+  return {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    metaData: user.metaData,
+    hasPassword: user.hasPassword,
+    isVerified: user.isVerified,
+    userType: user.userType,
+    appID: user.appID,
+    userID: user.userID,
+    email: user.email,
+    status: user.status,
+    emailVerified: user.emailVerified,
+    emailVerificationType: user.emailVerificationType,
+    updatedAt: Date.now(),
+  }
+}
 const PasswordValidator = (password, passwordValidator) => {
   var failedVerification = '';
   const { minLength, shouldContainNumber, shouldContainUpperCase, shouldContainLowerCase, shouldContainSpecialCharacters } = passwordValidator;
@@ -23,6 +40,16 @@ const PasswordValidator = (password, passwordValidator) => {
   return {
     isValid: failedVerification === '',
     message: failedVerification
+  };
+}
+function isPathInList(path, method, pathList) {
+  const matchingPath = pathList.find(entry => {
+    const pathRegex = new RegExp('^' + entry.path.replace(/:[^/]+/g, '([^/]+)') + '$');
+    return path.match(pathRegex) && entry.method === method;
+  });
+  return {
+    status: !!matchingPath,
+    ...matchingPath 
   };
 }
 // Method to validate the entered password using argon2
@@ -111,5 +138,7 @@ module.exports = {
   generateOTP,
   WrapHandler,
   validateRequest,
-  PasswordValidator
+  PasswordValidator,
+  getUserObjectFormat,
+  isPathInList
 };
