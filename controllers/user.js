@@ -67,10 +67,14 @@ exports.createUser = async (req, res) => {
     if (isApiRequest) {
       await HandleEventNotification("user-registered", client, response);
     }
+    const token = await signToken(response, req.appID, 3600);
+    response.token = token;
+
     return res.status(200).send(response);
   } catch (err) {
-    // console.log(err);
+    console.log(err);
     return res.sendStatus(500);
+
   }
 };
 exports.loginUser = async (req, res) => {
@@ -96,6 +100,11 @@ exports.loginUser = async (req, res) => {
     if (!user)
       return res.status(400).send({ message: "Incorrect email or password." });
 
+    if (!user.status) {
+      return res
+        .status(400)
+        .send({ message: user?.statusMessage || "Account is disabled" });
+    }
     const hashedPassword = user.password;
     const plainPassword = body.password;
 
@@ -116,20 +125,21 @@ exports.loginUser = async (req, res) => {
     if (isApiRequest) {
       await HandleEventNotification("user-loggedin", client, response);
     }
-    const token = await signToken(response, req.appID);
+    const token = await signToken(response, req.appID, 3600);
     response.token = token;
     return res.status(200).send(response);
   } catch (err) {
-    return res.send(500);
+    return res.sendStatus(500);
   }
 };
 exports.getUser = async (req, res) => {
-  const userID = req.params.userID;
+  const userID = req.params.userID || req.userID;
 
   const isApiRequest = req?.isApiRequest;
   const client = req?.apiClient;
 
   const appID = isApiRequest ? req.appAccessKey : req.appID;
+
   try {
     const selectOptions = "-_id -__v -appAccessKey -password -appID";
     const user = await UserService.getUserByUserID(
@@ -138,15 +148,23 @@ exports.getUser = async (req, res) => {
       selectOptions
     );
     if (!user) return res.status(400).send({ message: "User not found " });
+    if (isApiRequest) {
+      await HandleEventNotification("user-profile-retrieved", client, {
+        userID: user.userID,
+        email: user.email,
+      });
+    }
+
     return res.status(200).send(user);
   } catch (err) {
-    // console.log(err);
-    return res.send(500);
+    console.log(err);
+    return res.sendStatus(500);
   }
 };
 
 exports.updatePassword = async (req, res) => {
-  const userID = req.params.userID;
+
+  const userID = req.params.userID || req.userID;
   const isApiRequest = req?.isApiRequest;
   const client = req?.apiClient;
 
@@ -158,15 +176,16 @@ exports.updatePassword = async (req, res) => {
         message: val,
       });
     const selectOptions = " -__v -appAccessKey -appID";
+    const appID = isApiRequest ? req.appAccessKey : req.appID;
     const user = await UserService.getUserByUserID(
       userID,
-      req.appID,
+      appID,
       selectOptions
     );
     if (!user) return res.status(400).send({ message: "User not found " });
 
     const hashedPassword = user.password;
-    const plainPassword = update.password;
+    const plainPassword = update.oldPassword;
 
     const isValidPassword = await validateHash(hashedPassword, plainPassword);
 
@@ -178,10 +197,11 @@ exports.updatePassword = async (req, res) => {
       const passwordValidator = client?.appSettings?.passwordVerifier;
       if (passwordValidator) {
         const { isValid, message } = await PasswordValidator(
-          update.password,
+          update.newPassword,
           passwordValidator
         );
-        if (!isValid) return res.status(400).send({ message: "New " + message });
+        if (!isValid)
+          return res.status(400).send({ message: "New " + message });
       }
     }
 
@@ -190,9 +210,66 @@ exports.updatePassword = async (req, res) => {
     });
     if (updateUser) {
       if (isApiRequest) {
-        console.log(req.body);
         await HandleEventNotification("user-password-changed", client, {
-          ...update,
+          userID: user.userID,
+          email: user.email,
+        });
+      }
+      return res.status(200).send({
+        message: "Password update successful",
+        success: true,
+        ...update,
+      });
+    }
+    return res.status(400).send({
+      message: "Update failed",
+      success: false,
+    });
+  } catch (err) {
+    console.log(err);
+    return res.sendStatus(500);
+  }
+};
+exports.resetPassword = async (req, res) => {
+  const userID = req.params.userID || req.userID;
+  const isApiRequest = req?.isApiRequest;
+  const client = req?.apiClient;
+
+  try {
+    const update = req.body;
+    const val = validateRequest(update, ["newPassword"]);
+    if (val)
+      return res.status(400).send({
+        message: val,
+      });
+    const selectOptions = " -__v -appAccessKey -appID";
+    const appID = isApiRequest ? req.appAccessKey : req.appID;
+    const user = await UserService.getUserByUserID(
+      userID,
+      appID,
+      selectOptions
+    );
+    if (!user) return res.status(400).send({ message: "User not found " });
+
+    // update the password
+    if (isApiRequest) {
+      const passwordValidator = client?.appSettings?.passwordVerifier;
+      if (passwordValidator) {
+        const { isValid, message } = await PasswordValidator(
+          update.newPassword,
+          passwordValidator
+        );
+        if (!isValid)
+          return res.status(400).send({ message: "New " + message });
+      }
+    }
+
+    const updateUser = await UserService.updateUser(user.id, {
+      password: await createHash(update.newPassword),
+    });
+    if (updateUser) {
+      if (isApiRequest) {
+        await HandleEventNotification("user-password-changed", client, {
           userID: user.userID,
           email: user.email,
         });
@@ -213,15 +290,17 @@ exports.updatePassword = async (req, res) => {
   }
 };
 exports.updateUser = async (req, res) => {
-  const userID = req.params.userID;
+  const userID = req.params.userID || req.userID;
   const isApiRequest = req?.isApiRequest;
   const client = req?.apiClient;
+  const isStatusUpdate = Boolean(req?.params.status) || false;
 
   try {
     const selectOptions = " -__v -appAccessKey -password -appID";
+    const appID = isApiRequest ? req.appAccessKey : req.appID;
     const user = await UserService.getUserByUserID(
       userID,
-      req.appID,
+      appID,
       selectOptions
     );
     if (!user) return res.status(400).send({ message: "User not found " });
@@ -235,6 +314,14 @@ exports.updateUser = async (req, res) => {
     if (update.password) {
       delete update.password;
     }
+    if(!isStatusUpdate){
+      if (update.status) {
+        delete update.status;
+      }
+      if (update.statusMessage) {
+        delete update.statusMessage;
+      }
+    }
 
     const updateUser = await UserService.updateUser(user.id, {
       ...update,
@@ -242,7 +329,6 @@ exports.updateUser = async (req, res) => {
     });
     if (updateUser) {
       if (isApiRequest) {
-        console.log(req.body);
         await HandleEventNotification("user-updated", client, {
           ...update,
           userID: user.userID,
@@ -278,7 +364,7 @@ exports.createUserAPIKey = async (req, res) => {
     return res.status(200).send(keys);
   } catch (err) {
     console.log(err);
-    return res.send(500);
+    return res.sendStatus(500);
   }
 };
 exports.getClientUsers = async (req, res) => {

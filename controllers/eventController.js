@@ -1,12 +1,14 @@
 const request = require("axios");
-exports.HandleEventNotification = (event, client, payload) => {
+const hookLogModel = require("../models/Hooks.js");
 
+exports.HandleEventNotification = async (event, client, payload) => {
+  await createHookLog(event, client, payload);
   if (
     client &&
     client?.appSettings?.eventNotifications?.enabled &&
     client?.appSettings?.eventNotifications?.webhookURL
   ) {
-    console.log("here");
+    
     request({
       url: client?.appSettings?.eventNotifications?.webhookURL,
       method: "post",
@@ -24,3 +26,12 @@ exports.HandleEventNotification = (event, client, payload) => {
       .catch((err) => console.log(err));
   }
 };
+const createHookLog = async (event, client, payload) => {
+  const hookLog = {
+    hookEvent: event,
+    appID: client?.appID,
+    hookPayload: payload,
+    hookURL: client?.appSettings?.eventNotifications?.webhookURL || ""
+  };
+  await hookLogModel.create(hookLog);
+}

@@ -61,26 +61,35 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
-const signToken = (data, appID) => {
+const signToken = (data, appID, expiresInSeconds = 3600) => {
   let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
   const payload = { payload: data };
   payload.date = Date.now();
 
-  return jwt.sign(payload, jwtSecretKey);
+  // Calculate expiration time
+  const expiresInMilliseconds = expiresInSeconds * 1000;
+  payload.expiresAt = new Date(payload.date + expiresInMilliseconds);
+
+  // Add token expiry
+  return jwt.sign(payload, jwtSecretKey, { expiresIn: expiresInSeconds });
 };
+
 const verifyToken = (token, appID) => {
   let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
 
   try {
-    const verified = jwt.verify(token, jwtSecretKey);
-    if (verified) {
-      return verified;
-    } else {
-      // Access Denied
+    const decoded = jwt.verify(token, jwtSecretKey);
+    // Check if the token has expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      // Token has expired
+      console.log('expired');
       return false;
     }
+
+    return decoded;
   } catch (error) {
     // Access Denied
+    console.log(error);
     return false;
   }
 };

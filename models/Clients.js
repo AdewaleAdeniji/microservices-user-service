@@ -19,7 +19,19 @@ const clientSchema = new Schema(
     },
     appSettings: {
       type: Object,
-      default: {},
+      default: {
+        eventNotifications: {
+          webhookURL: "",
+          enabled: false,
+        },
+        passwordVerifier: {
+          minLength: 8,
+          shouldContainNumber: true,
+          shouldContainSpecialCharacters: true,
+          shouldContainLowerCase: true,
+          shouldContainUpperCase: true,
+        },
+      },
     },
     status: {
       default: true,

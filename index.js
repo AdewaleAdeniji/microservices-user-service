@@ -23,7 +23,7 @@ app.use(function (error, _, res, next) {
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-app.use("/auth",validateAppKey,  userRouter);
+app.use("/auth", validateAppKey,  userRouter);
 app.use("/token", validateToken, tokenRouter);
 app.use("/key", validateAPIKey, tokenRouter);
 

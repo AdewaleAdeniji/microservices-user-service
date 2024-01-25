@@ -49,7 +49,7 @@ const userSchema = new Schema(
     },
     statusMessage: {
       type: String,
-      default: "Account created successfully",
+      default: "",
     },
     updatedUserData: {
       type: Array,

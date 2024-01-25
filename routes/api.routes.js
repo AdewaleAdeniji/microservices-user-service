@@ -1,24 +1,43 @@
 const express = require("express");
-const { verifyAuthToken } = require("../controllers/tokenController");
-const { createUser, loginUser, getUser, updateUser } = require("../controllers/user");
+const { createUser, loginUser, getUser, updateUser, updatePassword, resetPassword } = require("../controllers/user");
 
 const apiRouter = express.Router();
+// user apis
 apiRouter.route("/user/register").post(createUser)
 apiRouter.route("/user/login").post(loginUser)
-apiRouter.route("/users/:userID").get(getUser)
-apiRouter.route("/users/:userID").post(updateUser)
-apiRouter.route("/users/password/:userID").post(updateUser)
+apiRouter.route("/user").get(getUser)
+apiRouter.route("/user").post(updateUser)
+apiRouter.route("/user/password").post(updatePassword)
+
+
+
+//admin apis
+apiRouter.route("/admin/user/:userID").get(getUser)
+apiRouter.route("/admin/user/:userID").post(updateUser)
+apiRouter.route("/users/:status/:userID").post(updateUser)
+apiRouter.route("/users/resetpassword/:userID").post(resetPassword)
+
 
 const RoutesWithPrivateKeyAccess = [
     {
-        path: "/users/:userID",
+        path: "/users/resetpassword/:userID",
         method: "POST",
         privateKeyRequired: true,
     },
     {
-        path: "/users/password/:userID",
+        path: "/user",
+        method: "GET",
+        validateBearerToken: true,
+    },
+    {
+        path: "/user",
         method: "POST",
-        privateKeyRequired: true,
-    }     
+        validateBearerToken: true,
+    },
+    {
+        path: "/user/password",
+        method: "POST",
+        validateBearerToken: true,
+    }      
 ]
 module.exports =  { apiRouter, RoutesWithPrivateKeyAccess };

@@ -5,24 +5,27 @@ const { verifyToken, isPathInList } = require("../utils");
 const { decrypt, generateKeys } = require("../utils/apiKeys");
 
 const validateToken = async (req, res, next) => {
-  const headers = req.headers;
-  const authorization = headers.authorization;
-  const appKey = headers.appkey;
-  if (!appKey) {
-    return res.status(403).send({ message: "No app key" });
+  const { authpublickey, appid, authorization, appkey } = req.headers;
+
+  const appID = appid || appkey;
+  if (appid) {
+    if(!authpublickey){
+      return res.status(403).send({ message: "Forbidden ACCESS" });
+    }
   }
   if (!authorization) {
     return res.status(403).send({ message: "Forbidden access, login first" });
   }
   //validate the token itself
-  const val = await verifyToken(authorization.split(" ")[1], appKey);
+
+  const val = await verifyToken(authorization.split(" ")[1], appID);
   if (!val) {
     return res.status(403).send({ message: "Access expired, login first" });
   }
-  console.log(req.originalUrl, appKey)
+  console.log(req.originalUrl, appID);
   req.userID = val.payload.userID;
   req.user = val.payload;
-  req.appID = appKey;
+  req.appID = appID;
   next();
 };
 const validateAPIKey = async (req, res, next) => {
@@ -35,68 +38,107 @@ const validateAPIKey = async (req, res, next) => {
     return res.status(403).send({ message: "Forbidden ACCESS" });
   }
   //validate the token itself
-  const val = await decrypt(privateKey, publicKey)
+  const val = await decrypt(privateKey, publicKey);
   if (!val) {
     return res.status(403).send({ message: "Invalid API key access" });
   }
-  console.log(req.originalUrl, appKey)
+  console.log(req.originalUrl, appKey);
   req.userID = val;
   req.user = await getUserByID(val, appKey);
   next();
 };
 
 const validateClientAPIKey = async (req, res, next) => {
-  const headers = req.headers;
-  const authpublicKey = headers.authpublickey;
-  const appID = headers.appid;
+  const { authpublickey, appid, authprivatekey } = req.headers;
 
-  if (!appID || !authpublicKey) {
+  if (!appid || !authpublickey) {
     return res.status(403).send({ message: "Forbidden ACCESS" });
   }
-  const { status, privateKeyRequired } = await isPathInList(req.path, req.method, RoutesWithPrivateKeyAccess)
 
-  if(status && privateKeyRequired){
-    const authprivateKey = headers.authprivatekey;
-    if (!authprivateKey) {
+  const { status, validateBearerToken,  privateKeyRequired } = await isPathInList(
+    req.path,
+    req.method,
+    RoutesWithPrivateKeyAccess
+  );
+
+  if(status && validateBearerToken){
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+      return res.status(403).send({ message: "Request Forbidden" });
+    }
+    //validate the token itself
+    const val = await verifyToken(authorization.split(" ")[1], appid);
+    if (!val) {
+      return res.status(403).send({ message: "Access expire, login first" });
+    }
+    req.userID =  val.payload.userID;
+    req.user = val.payload;
+    req.params.userID = val.payload.userID;
+    console.log(req.params);
+  }
+
+  if (status && privateKeyRequired) {
+    if (!authprivatekey) {
       return res.status(403).send({ message: "Invalid API keys access" });
     }
-    const val = await decrypt(authprivateKey, authpublicKey)
-    if (!val) {
+
+    const decryptedAppID = await decrypt(authprivatekey, authpublickey);
+    if (!decryptedAppID) {
       return res.status(403).send({ message: "Invalid API key access" });
     }
-    req.userID = val;
-    req.user = await getUserByID(val, appID);
-    req.appID = appID;
-    req.appAccessKey = authpublicKey;
-    req.isApiRequest = true;
-    next();
-    return;
+
+    const client = await getClientApp(decryptedAppID);
+
+    if (!client) {
+      return res.status(403).send({ message: "Invalid API key access" });
+    }
+
+    return setClientRequestProperties(req, res, client, next);
   }
-  const keys = await generateKeys(appID);
-  const { privateKey, publicKey } = keys;
-  if(publicKey !== authpublicKey) return res.status(403).send({ message: "Forbidden Request Keys" });
-  
-  req.userID = appID;
-  const client = await getClientApp(appID);
-  if(!client) return res.status(403).send({ message: "Invalid API key access" });
+
+  const keys = await generateKeys(appid);
+  const { publicKey } = keys;
+
+  if (publicKey !== authpublickey) {
+    return res.status(403).send({ message: "Forbidden Request Keys" });
+  }
+
+  const client = await getClientApp(appid);
+
+  if (!client) {
+    return res.status(403).send({ message: "Invalid API key access" });
+  }
+
+  await setClientRequestProperties(req, res, client, next);
+};
+
+const setClientRequestProperties = (req, res, client, next) => {
+  const { origin } = req.headers;
+  console.log('origin ' + origin)
+  // const allowedOrigins = client?.allowedOrigins || [];
+
+  // if (!allowedOrigins.includes(origin)) {
+  //   return res.status(403).send({ message: "CORS ERROR: Forbidden Origin" });
+  // }
   req.appID = client.appID;
+  req.isApiRequest = true;
+  req.appAccessKey = client.appAccessKey;
+  req.userID = req.params.userID;
+
   client.appSettings = {
     eventNotifications: {
       webhookURL: "https://webhook.site/180db206-bc5b-4e94-a8c8-53378740ca19",
       enabled: true,
     },
     passwordVerifier: {
-    minLength: 9,
-    shouldContainNumber: false,
-    shouldContainSpecialCharacters: false,
-    shouldContainLowerCase: true,
-    shouldContainUpperCase: true,
-  }
-}
+      minLength: 9,
+      shouldContainNumber: false,
+      shouldContainSpecialCharacters: false,
+      shouldContainLowerCase: true,
+      shouldContainUpperCase: true,
+    },
+  };
   req.apiClient = client;
-  req.isApiRequest = true;
-  req.appID = client.appID;
-  req.appAccessKey = client.appAccessKey;
   next();
 };
 
@@ -107,14 +149,14 @@ const validateAppKey = async (req, res, next) => {
     return res.status(403).send({ message: "No app key" });
   }
   // #TODO validate app key here
-  console.log(req.originalUrl, appKey)
+  console.log(req.originalUrl, appKey);
   req.appID = appKey;
   next();
 };
 
-module.exports  = {
-    validateToken,
-    validateAppKey,
-    validateAPIKey,
-    validateClientAPIKey
-}
+module.exports = {
+  validateToken,
+  validateAppKey,
+  validateAPIKey,
+  validateClientAPIKey,
+};
