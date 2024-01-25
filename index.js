@@ -9,13 +9,21 @@ const userRouter = require("./routes/user.routes");
 const tokenRouter = require("./routes/auth.routes");
 const { validateToken, validateAppKey, validateAPIKey, validateClientAPIKey } = require("./middlewares");
 const appRouter = require("./routes/app.routes");
-const apiRouter = require("./routes/api.routes");
+const { apiRouter } = require("./routes/api.routes");
 
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
+app.use(function (error, _, res, next) {
+  //Catch json error
+  if (error) {
+    return res.status(400).send({ message: "Invalid Request body JSON" });
+  }
+  next();
+});
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use("/auth",validateAppKey,  userRouter);
+
+app.use("/auth", validateAppKey,  userRouter);
 app.use("/token", validateToken, tokenRouter);
 app.use("/key", validateAPIKey, tokenRouter);
 

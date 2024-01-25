@@ -16,7 +16,6 @@ const userSchema = new Schema(
     isVerified: {
       type: Boolean,
       default: false,
-      immutable: true,
     },
     userType: {
       type: String,
@@ -48,6 +47,14 @@ const userSchema = new Schema(
       default: true,
       type: Boolean,
     },
+    statusMessage: {
+      type: String,
+      default: "",
+    },
+    updatedUserData: {
+      type: Array,
+      default: [],
+    }
   },
   {
     timestamps: true,

@@ -12,6 +12,23 @@ const generateID = () => {
   return userId + generateRandomString(10);
 };
 
+const getUserObjectFormat  = (user) => {
+  return {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    metaData: user.metaData,
+    hasPassword: user.hasPassword,
+    isVerified: user.isVerified,
+    userType: user.userType,
+    appID: user.appID,
+    userID: user.userID,
+    email: user.email,
+    status: user.status,
+    emailVerified: user.emailVerified,
+    emailVerificationType: user.emailVerificationType,
+    updatedAt: Date.now(),
+  }
+}
 const PasswordValidator = (password, passwordValidator) => {
   var failedVerification = '';
   const { minLength, shouldContainNumber, shouldContainUpperCase, shouldContainLowerCase, shouldContainSpecialCharacters } = passwordValidator;
@@ -25,6 +42,16 @@ const PasswordValidator = (password, passwordValidator) => {
     message: failedVerification
   };
 }
+function isPathInList(path, method, pathList) {
+  const matchingPath = pathList.find(entry => {
+    const pathRegex = new RegExp('^' + entry.path.replace(/:[^/]+/g, '([^/]+)') + '$');
+    return path.match(pathRegex) && entry.method === method;
+  });
+  return {
+    status: !!matchingPath,
+    ...matchingPath 
+  };
+}
 // Method to validate the entered password using argon2
 const validateHash = async function (hashed, candidatePassword) {
   return await argon2.verify(hashed, candidatePassword);
@@ -34,26 +61,35 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
-const signToken = (data, appID) => {
+const signToken = (data, appID, expiresInSeconds = 3600) => {
   let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
   const payload = { payload: data };
   payload.date = Date.now();
 
-  return jwt.sign(payload, jwtSecretKey);
+  // Calculate expiration time
+  const expiresInMilliseconds = expiresInSeconds * 1000;
+  payload.expiresAt = new Date(payload.date + expiresInMilliseconds);
+
+  // Add token expiry
+  return jwt.sign(payload, jwtSecretKey, { expiresIn: expiresInSeconds });
 };
+
 const verifyToken = (token, appID) => {
   let jwtSecretKey = process.env.JWT_SECRET_KEY + appID;
 
   try {
-    const verified = jwt.verify(token, jwtSecretKey);
-    if (verified) {
-      return verified;
-    } else {
-      // Access Denied
+    const decoded = jwt.verify(token, jwtSecretKey);
+    // Check if the token has expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      // Token has expired
+      console.log('expired');
       return false;
     }
+
+    return decoded;
   } catch (error) {
     // Access Denied
+    console.log(error);
     return false;
   }
 };
@@ -111,5 +147,7 @@ module.exports = {
   generateOTP,
   WrapHandler,
   validateRequest,
-  PasswordValidator
+  PasswordValidator,
+  getUserObjectFormat,
+  isPathInList
 };
