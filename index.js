@@ -11,6 +11,8 @@ const { validateToken, validateAppKey, validateAPIKey, validateClientAPIKey } = 
 const appRouter = require("./routes/app.routes");
 const { apiRouter } = require("./routes/api.routes");
 
+const HookModel = require("./models/Hooks.js");
+
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 app.use(function (error, _, res, next) {
@@ -30,6 +32,16 @@ app.use("/key", validateAPIKey, tokenRouter);
 app.use("/app", validateToken, appRouter);
 app.use("/api", validateClientAPIKey, apiRouter);
 
+app.get("/update", async (req, res)=> {
+  const hook = await HookModel.find({ hookEvent: "user-password-changed"});
+  console.log(hook)
+  hook.forEach(async (ev) => {
+    await HookModel.findByIdAndUpdate(ev._id, {
+      hookEvent: "userPasswordChanged"
+    })
+  })
+  res.send("ok");
+})
 
 app.get("/health", (_, res) => {
   return res.status(200).send("OK");

@@ -53,8 +53,14 @@ exports.getAppStats = async (req, res) => {
     const stats = await hookModel.aggregate(
       getDashboardAggregate(client.appID)
     );
+    const events = await hookModel
+      .find({ appID: client.appID })
+      .select("-_id -__v -hookPayload");
 
-    return res.status(200).send(stats);
+    return res.status(200).send({
+      stats: stats[0],
+      events,
+    });
   } catch (err) {
     console.log(err);
     return res.sendStatus(500);
