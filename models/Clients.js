@@ -20,6 +20,7 @@ const clientSchema = new Schema(
     appSettings: {
       type: Object,
       default: {
+        tokenExpiry: 3600,
         eventNotifications: {
           webhookURL: "",
           enabled: false,

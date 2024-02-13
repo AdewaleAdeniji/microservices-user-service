@@ -123,21 +123,7 @@ const setClientRequestProperties = (req, res, client, next) => {
   req.appID = client.appID;
   req.isApiRequest = true;
   req.appAccessKey = client.appAccessKey;
-  req.userID = req.params.userID;
-
-  client.appSettings = {
-    eventNotifications: {
-      webhookURL: "https://webhook.site/180db206-bc5b-4e94-a8c8-53378740ca19",
-      enabled: true,
-    },
-    passwordVerifier: {
-      minLength: 9,
-      shouldContainNumber: false,
-      shouldContainSpecialCharacters: false,
-      shouldContainLowerCase: true,
-      shouldContainUpperCase: true,
-    },
-  };
+  req.userID = req.params.userID;;
   req.apiClient = client;
   next();
 };

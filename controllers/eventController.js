@@ -23,7 +23,7 @@ exports.HandleEventNotification = async (event, client, payload) => {
       .then((message) => {
         console.log('webhook event '+event+' sent');
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log("error webhook send"));
   }
 };
 const createHookLog = async (event, client, payload) => {

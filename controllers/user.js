@@ -65,8 +65,9 @@ exports.createUser = async (req, res) => {
       message: "Registration successful",
     };
     if (isApiRequest) {
-      await HandleEventNotification("user-registered", client, response);
+      await HandleEventNotification("userRegistered", client, response);
     }
+    console.log(client.appSettings)
     const token = await signToken(response, req.appID, 3600);
     response.token = token;
 
@@ -123,9 +124,11 @@ exports.loginUser = async (req, res) => {
       message: "login successful",
     };
     if (isApiRequest) {
-      await HandleEventNotification("user-loggedin", client, response);
+      await HandleEventNotification("userLoggedin", client, response);
     }
-    const token = await signToken(response, req.appID, 3600);
+    const expiry = client.appSettings.tokenExpiry||3600;
+    console.log(expiry)
+    const token = await signToken(response, req.appID, expiry);
     response.token = token;
     return res.status(200).send(response);
   } catch (err) {
@@ -149,7 +152,7 @@ exports.getUser = async (req, res) => {
     );
     if (!user) return res.status(400).send({ message: "User not found " });
     if (isApiRequest) {
-      await HandleEventNotification("user-profile-retrieved", client, {
+      await HandleEventNotification("userProfileRetrieved", client, {
         userID: user.userID,
         email: user.email,
       });
@@ -210,7 +213,7 @@ exports.updatePassword = async (req, res) => {
     });
     if (updateUser) {
       if (isApiRequest) {
-        await HandleEventNotification("user-password-changed", client, {
+        await HandleEventNotification("userPasswordChanged", client, {
           userID: user.userID,
           email: user.email,
         });
@@ -269,7 +272,7 @@ exports.resetPassword = async (req, res) => {
     });
     if (updateUser) {
       if (isApiRequest) {
-        await HandleEventNotification("user-password-changed", client, {
+        await HandleEventNotification("userPasswordChanged", client, {
           userID: user.userID,
           email: user.email,
         });
@@ -329,7 +332,7 @@ exports.updateUser = async (req, res) => {
     });
     if (updateUser) {
       if (isApiRequest) {
-        await HandleEventNotification("user-updated", client, {
+        await HandleEventNotification("userUpdated", client, {
           ...update,
           userID: user.userID,
           email: user.email,
@@ -372,10 +375,10 @@ exports.getClientUsers = async (req, res) => {
     const appID = req.params.appID;
     const client = await clientModel
       .findOne({ appOwnerID: req.userID, appID: req.params.appID })
-      .select("-_id -__v -appOwnerID -appAccessKey");
+      .select("-_id -__v -appOwnerID ");
     if (!client) return res.status(404).send({ message: "Client not found" });
     const selectOptions = " -__v -appAccessKey -password -appID";
-    const users = await UserService.getClientUsers(appID, selectOptions);
+    const users = await UserService.getClientUsers(client.appAccessKey, selectOptions);
     return res.status(200).send(users);
   } catch (err) {
     console.log(err);

@@ -14,7 +14,7 @@ apiRouter.route("/user/password").post(updatePassword)
 //admin apis
 apiRouter.route("/admin/user/:userID").get(getUser)
 apiRouter.route("/admin/user/:userID").post(updateUser)
-apiRouter.route("/users/:status/:userID").post(updateUser)
+apiRouter.route("/users/status/:userID").post(updateUser)
 apiRouter.route("/users/resetpassword/:userID").post(resetPassword)
 
 

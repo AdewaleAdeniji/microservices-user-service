@@ -3,8 +3,14 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    firstName: String,
-    lastName: String,
+    firstName: {
+      type: String,
+      default: "",
+    },
+    lastName: {
+      type: String,
+      default: "",
+    },
     metaData: {
       type: Object,
       default: {},
@@ -30,7 +36,7 @@ const userSchema = new Schema(
       immutable: true,
       type: String,
     },
-    emailVerified : {
+    emailVerified: {
       type: Boolean,
       default: false,
     },
@@ -54,7 +60,7 @@ const userSchema = new Schema(
     updatedUserData: {
       type: Array,
       default: [],
-    }
+    },
   },
   {
     timestamps: true,
