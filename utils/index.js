@@ -69,7 +69,7 @@ const signToken = (data, appID, expiresInSeconds = 3600) => {
   // Calculate expiration time
   const expiresInMilliseconds = expiresInSeconds * 1000;
   payload.expiresAt = new Date(payload.date + expiresInMilliseconds);
-
+  console.log(Math.floor(Date.now() / 1000) + expiresInSeconds)
   // Add token expiry
   return jwt.sign(payload, jwtSecretKey, { expiresIn: expiresInSeconds });
 };
@@ -80,6 +80,7 @@ const verifyToken = (token, appID) => {
   try {
     const decoded = jwt.verify(token, jwtSecretKey);
     // Check if the token has expired
+    console.log(decoded)
     if (decoded.exp && decoded.exp * 1000 < Date.now()) {
       // Token has expired
       console.log('expired');
