@@ -126,7 +126,7 @@ exports.loginUser = async (req, res) => {
     if (isApiRequest) {
       await HandleEventNotification("userLoggedin", client, response);
     }
-    const expiry = client?.appSettings?.tokenExpiry||3600000;
+    const expiry = parseInt(client?.appSettings?.tokenExpiry||3600000);
     console.log(expiry)
     const token = await signToken(response, req.appID, expiry);
     response.token = token;
