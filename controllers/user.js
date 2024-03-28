@@ -64,10 +64,11 @@ exports.createUser = async (req, res) => {
       userID: createUser.userID,
       message: "Registration successful",
     };
+
     if (isApiRequest) {
       await HandleEventNotification("userRegistered", client, response);
     }
-    console.log(client.appSettings)
+
     const token = await signToken(response, req.appID, 3600);
     response.token = token;
 
@@ -81,7 +82,7 @@ exports.createUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const body = req.body;
-
+    console.log('here 1')
     const isApiRequest = req?.isApiRequest;
     const client = req?.apiClient;
 
@@ -123,15 +124,20 @@ exports.loginUser = async (req, res) => {
       userID: user.userID,
       message: "login successful",
     };
+    console.log('here')
     if (isApiRequest) {
       await HandleEventNotification("userLoggedin", client, response);
+      console.log('then here')
     }
-    const expiry = client.appSettings.tokenExpiry||3600;
+    console.log('proceeds?')
+    console.log(client.appSettings)
+    const expiry = 3600000 //client?.appSettings?.tokenExpiry||3600000;
     console.log(expiry)
     const token = await signToken(response, req.appID, expiry);
     response.token = token;
     return res.status(200).send(response);
   } catch (err) {
+    console.log(err);
     return res.sendStatus(500);
   }
 };
