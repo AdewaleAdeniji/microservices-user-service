@@ -82,7 +82,6 @@ exports.createUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const body = req.body;
-    console.log('here 1')
     const isApiRequest = req?.isApiRequest;
     const client = req?.apiClient;
 
@@ -124,14 +123,10 @@ exports.loginUser = async (req, res) => {
       userID: user.userID,
       message: "login successful",
     };
-    console.log('here')
     if (isApiRequest) {
       await HandleEventNotification("userLoggedin", client, response);
-      console.log('then here')
     }
-    console.log('proceeds?')
-    console.log(client.appSettings)
-    const expiry = 3600000 //client?.appSettings?.tokenExpiry||3600000;
+    const expiry = client?.appSettings?.tokenExpiry||3600000;
     console.log(expiry)
     const token = await signToken(response, req.appID, expiry);
     response.token = token;
